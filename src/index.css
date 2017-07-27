@@ -2,4 +2,22 @@ body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
+  background-color: beige;
+}
+
+.app {
+  text-align: center;
+}
+
+.search-input {
+  padding: 20px;
+}
+
+.search-results {
+  font-size: large;
+}
+
+.item-image {
+  width: 200px;
+  height: 200px;
 }

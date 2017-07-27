@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import axios from 'axios';
 import debounce from 'lodash/debounce';
-import './App.css';
+import {ResultItem} from './components/ResultItem';
+
+const DELAY = 100;
 
 class App extends Component {
   constructor(props) {
@@ -11,35 +13,57 @@ class App extends Component {
       data: []
     };
 
+    this.cancel = false;
+
     this.dataSource = axios.create({
       baseURL: 'https://efounbqifq-dsn.algolia.net/1/indexes/Product_v2_en/'
     });
   }
 
-  // loader
-  // check input value
-  componentDidMount() {
-    // curl 'https://efounbqifq-dsn.algolia.net/1/indexes/Product_v2_en?query=bag&limit=5’
-    // -H 'X-Algolia-API-Key: 2a92fd7cd4aca67298fbe1115fdef211’ -H 'X-Algolia-Application-Id: EFOUNBQIFQ’
-
-
-  }
-
   debouncedSearch = debounce((props) => {
-    console.log('debounce: ', props);
     this.search(props);
-  }, 1000);
+  }, DELAY);
 
   search = (keyword) => {
+    // if there is active request - cancel it
+    if (this.cancel) {
+      this.cancel();
+      this.cancel = false;
+    }
+
+    // if search field is empty, clear data
+    if (!keyword) {
+      this.setState({
+        data: []
+      });
+
+      return false;
+    }
+
     const url = 'query?x-algolia-application-id=EFOUNBQIFQ&x-algolia-api-key=2a92fd7cd4aca67298fbe1115fdef211';
     const params = JSON.stringify({"params": `query=${keyword}`});
 
-    this.dataSource.post(url, params).then(res => {
+    const CancelToken = axios.CancelToken;
+    const source = CancelToken.source();
+    const config = {
+      cancelToken: source.token
+    };
+
+    this.cancel = source.cancel;
+
+    this.dataSource.post(url, params, config).then(res => {
+      // TODO slice(0, 5) was used because of problems with query limitation
       this.setState({
-        data: res.data.hits
+        data: [...res.data.hits.slice(0, 5)]
       });
     }).catch((err) => {
-      console.error(err);
+      if (axios.isCancel(err)) {
+        console.log('Request canceled');
+      } else {
+        console.error(err);
+      }
+    }).then(() => {
+      this.cancel = false;
     });
   };
 
@@ -50,16 +74,21 @@ class App extends Component {
 
   render() {
     return (
-      <div className="App">
+      <div className="app">
         <div
           className="search-input"
           onChange={this.handleSearchInputChange}
         >
           <input type="text" />
         </div>
-        <p className="App-intro">
-          results
-        </p>
+        <div className="search-results">
+          {this.state.data.map(item => <ResultItem
+            key={item.id}
+            title={item.title}
+            brand={item.brand}
+            images={item.images}
+          />)}
+        </div>
       </div>
     );
   }
