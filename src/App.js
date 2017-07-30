@@ -14,25 +14,28 @@ class App extends Component {
     };
 
     this.cancel = false;
+    this.keyword = false;
 
     this.dataSource = axios.create({
       baseURL: 'https://efounbqifq-dsn.algolia.net/1/indexes/Product_v2_en/'
     });
   }
 
-  debouncedSearch = debounce((props) => {
-    this.search(props);
+  debouncedSearch = debounce(() => {
+    this.search();
   }, DELAY);
 
-  search = (keyword) => {
+  search = () => {
     // if there is active request - cancel it
     if (this.cancel) {
       this.cancel();
       this.cancel = false;
+
+      return false;
     }
 
     // if search field is empty, clear data
-    if (!keyword) {
+    if (!this.keyword) {
       this.setState({
         data: []
       });
@@ -40,25 +43,14 @@ class App extends Component {
       return false;
     }
 
-    const url = 'query?x-algolia-application-id=EFOUNBQIFQ&x-algolia-api-key=2a92fd7cd4aca67298fbe1115fdef211';
-    const params = JSON.stringify({"params": `query=${keyword}`});
-
-    const CancelToken = axios.CancelToken;
-    const source = CancelToken.source();
-    const config = {
-      cancelToken: source.token
-    };
-
-    this.cancel = source.cancel;
-
-    this.dataSource.post(url, params, config).then(res => {
+    this.sendSearchRequest().then(res => {
       // TODO slice(0, 5) was used because of problems with query limitation
       this.setState({
         data: [...res.data.hits.slice(0, 5)]
       });
     }).catch((err) => {
       if (axios.isCancel(err)) {
-        console.log('Request canceled');
+        this.debouncedSearch();
       } else {
         console.error(err);
       }
@@ -67,9 +59,24 @@ class App extends Component {
     });
   };
 
+  sendSearchRequest = () => {
+      const url = 'query?x-algolia-application-id=EFOUNBQIFQ&x-algolia-api-key=2a92fd7cd4aca67298fbe1115fdef211';
+      const params = JSON.stringify({"params": `query=${this.keyword}`});
+
+      const CancelToken = axios.CancelToken;
+      const source = CancelToken.source();
+      const config = {
+          cancelToken: source.token
+      };
+
+      this.cancel = source.cancel;
+
+      return this.dataSource.post(url, params, config);
+  };
+
   handleSearchInputChange = (e) => {
-    const keyword = e.target.value;
-    this.debouncedSearch(keyword);
+    this.keyword = e.target.value;
+    this.debouncedSearch();
   };
 
   render() {
