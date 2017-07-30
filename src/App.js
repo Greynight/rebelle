@@ -44,9 +44,8 @@ class App extends Component {
     }
 
     this.sendSearchRequest().then(res => {
-      // TODO slice(0, 5) was used because of problems with query limitation
       this.setState({
-        data: [...res.data.hits.slice(0, 5)]
+        data: [...res.data.hits]
       });
     }).catch((err) => {
       if (axios.isCancel(err)) {
@@ -61,8 +60,8 @@ class App extends Component {
 
   sendSearchRequest = () => {
       const url = 'query?x-algolia-application-id=EFOUNBQIFQ&x-algolia-api-key=2a92fd7cd4aca67298fbe1115fdef211';
-      const params = JSON.stringify({"params": `query=${this.keyword}`});
-
+      // TODO api doesn't accept 'limit' parameter
+      const params = JSON.stringify({"params": `query=${this.keyword}&hitsPerPage=5`});
       const CancelToken = axios.CancelToken;
       const source = CancelToken.source();
       const config = {
